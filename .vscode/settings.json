@@ -21,5 +21,12 @@
     "**/.settings": true,
     "**/.exchange_modules_tmp": true,
     ".mule": true
+  },
+  "apexPMD.commandBufferSize": 100,
+  "apexPMD.runOnFileChange": true,
+  "apexPMD.runOnFileOpen": true,
+  "sonarlint.connectedMode.project": {
+    "connectionId": "narendraudemalla",
+    "projectKey": "narendraudemalla_CICD"
   }
 }
