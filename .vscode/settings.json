@@ -24,5 +24,9 @@
   },
   "apexPMD.commandBufferSize": 100,
   "apexPMD.runOnFileChange": true,
-  "apexPMD.runOnFileOpen": true
+  "apexPMD.runOnFileOpen": true,
+  "sonarlint.connectedMode.project": {
+    "connectionId": "narendraudemalla",
+    "projectKey": "narendraudemalla_CICD"
+  }
 }
