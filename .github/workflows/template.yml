@@ -148,16 +148,16 @@ jobs:
       ## Check the code coverage -- END
 
       ## Scan the code using SonarCloud
-      - name: SonarCloud Scan
-        id: sonar
+      #- name: SonarCloud Scan
+        #id: sonar-scanner
         uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.apex.coverage.reportPath=test-result-codecoverage.json
-            -Dsonar.verbose=true
+        #env:
+          #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          #SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        #with:
+          #args: >
+            #-Dsonar.apex.coverage.reportPath=test-result-codecoverage.json
+            #-Dsonar.verbose=true
 
       - name: SonarCloud Scan
         id: sonar
