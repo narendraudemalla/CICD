@@ -185,7 +185,7 @@ jobs:
             echo "Quality Gate Status: $SONAR_STATUS"
             if [ "$SONAR_STATUS" != "OK" ]; then
                 echo "SonarCloud Quality Gate failed!"
-                ##exit 1
+                exit 1
             fi
             env:
               SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
