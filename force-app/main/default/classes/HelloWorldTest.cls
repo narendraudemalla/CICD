@@ -23,11 +23,6 @@ public class HelloWorldTest {
             ProfileId = profileId
         );
         insert systemUser;
- 
-        Favorite_Account__c favAccount = new Favorite_Account__c ();
-        favAccount.name='7500000079';
-        favAccount.Is_Favorite__c  = true;
-        favAccount.Account_Type__c  = 'Saving';
     }
     @isTest
     static void testSayHello() {
