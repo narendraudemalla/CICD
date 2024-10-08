@@ -14,6 +14,14 @@
 
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
 
+[![codecov](https://codecov.io/gh/narendraudemalla/CICD/graph/badge.svg?token=VYZNKNF3K4)](https://codecov.io/gh/narendraudemalla/CICD)
+
+<a href="https://codecov.io/gh/narendraudemalla/CICD" > 
+ <img src="https://codecov.io/gh/narendraudemalla/CICD/graph/badge.svg?token=VYZNKNF3K4"/> 
+ </a>
+
+ 
+
 
 # Salesforce DX Project: Next Steps
 
