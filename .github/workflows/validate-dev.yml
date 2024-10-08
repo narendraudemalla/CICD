@@ -1,4 +1,4 @@
-name: Pre Validate to Dev Sandbox
+name: Validate to Dev Sandbox
 run-name: ${{ github.actor }} is running the Github Actions 🚀
 
 on:
@@ -11,7 +11,7 @@ on:
 
 jobs:
   build-and-deploy: 
-    name: Pre Validate Dev
+    name: Validate Dev
     uses: "./.github/workflows/template.yml"
     permissions:
       contents: read
