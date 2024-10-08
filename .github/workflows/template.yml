@@ -158,14 +158,47 @@ jobs:
           args: >
             -Dsonar.apex.coverage.reportPath=test-result-codecoverage.json
             -Dsonar.verbose=true
+
+      - name: SonarCloud Scan
+        id: sonar
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+            args: "-Dsonar.apex.coverage.reportPath=reports/test-result-codecoverage.json"
+    
+          ## Check the Quality Gate using SonarCloud API for the pull request
+      - name: Check the Quality Gate using SonarCloud API
+        run: |
+            MAX_RETRIES=30  # Maximum number of retries (5 minutes if we sleep 10s between retries)
+            RETRY_INTERVAL=10  # Sleep interval in seconds
+            SONAR_STATUS="NONE"
+            RETRIES=0
+            PR_NUMBER=${{ github.event.pull_request.number }}  # Extract pull request number
+            while [ "$SONAR_STATUS" == "NONE" ] && [ $RETRIES -lt $MAX_RETRIES ]; do
+            echo "Waiting for SonarCloud analysis to complete..."
+            sleep $RETRY_INTERVAL
+            SONAR_STATUS=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=narendraudemalla_CICD&pullRequest=$PR_NUMBER" | jq -r '.projectStatus.status')
+            RETRIES=$((RETRIES + 1))
+            done
+            echo "Quality Gate Status: $SONAR_STATUS"
+            if [ "$SONAR_STATUS" != "OK" ]; then
+                echo "SonarCloud Quality Gate failed!"
+                exit 1
+            fi
+            env:
+              SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
       
-      #- name: Upload code coverage for Apex to Codecov.io
-        #id: upload-coverage
-        #uses: codecov/codecov-action@v4
-        #with:
-          #flags: Apex
-        #env:
-          #CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload code coverage for Apex to Codecov.io
+        id: upload-coverage
+        uses: codecov/codecov-action@v4
+        with:
+          flags: Apex
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Install SFDX Git delta aka SGD 
         run: |
