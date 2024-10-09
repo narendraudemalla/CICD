@@ -1,3 +1,28 @@
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
+
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=bugs)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
+
+[![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
+
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=coverage)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
+
+[![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
+
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
+
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
+
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=narendraudemalla_CICD&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=narendraudemalla_CICD)
+
+[![codecov](https://codecov.io/gh/narendraudemalla/CICD/graph/badge.svg?token=VYZNKNF3K4)](https://codecov.io/gh/narendraudemalla/CICD)
+
+<a href="https://codecov.io/gh/narendraudemalla/CICD" > 
+ <img src="https://codecov.io/gh/narendraudemalla/CICD/graph/badge.svg?token=VYZNKNF3K4"/> 
+ </a>
+
+ 
+
+
 # Salesforce DX Project: Next Steps
 
 Now that you’ve created a Salesforce DX project, what’s next? Here are some documentation resources to get you started.
