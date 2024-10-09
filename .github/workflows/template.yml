@@ -315,18 +315,3 @@ jobs:
 
 ## If the event is PR [opened, edited, reoped] - Validate the change
 ## If PR is closed then - deploy the change
-
-  clean-up:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - run: echo "This is my second Job"
-        name: "Print Message"
-
-  post-cleanup:
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Print Info
-        run: |
-          echo "This will be used for cleanup purpose"
