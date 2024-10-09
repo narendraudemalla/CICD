@@ -288,21 +288,6 @@ jobs:
             echo "---- No changes to deploy ----"
           fi
 
-      - name: Deploy the Code
-        ## Best is to have a separate Org for validation purpose
-        if: ${{ github.event.pull_request.merged == true && github.event.action == 'closed' && env.apex_classes == 'No Apex classes found' }}
-        run: |
-          echo ${{ github.event_name }}
-          echo ${{ github.event.action }}
-          echo ${{ github.event.pull_request.merged }}
-          
-          if grep -q '<types>' delta/package/package.xml ; then
-            echo "---- Deploying added and modified metadata ----"
-            sf project deploy start --source-dir delta/force-app --target-org developer --wait 10
-          else
-            echo "---- No changes to deploy ----"
-          fi
-
       - name: Deploy Post Destructive Changes
         if: ${{ github.event.pull_request.merged == true && github.event.action == 'closed' }}
         run: |
