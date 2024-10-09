@@ -1,0 +1,302 @@
+name: Resuable workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+    secrets:
+      SONAR_TOKEN:
+        required: true
+      ENCRYPTED_KEY_FILE:
+        required: true
+      JWT_KEY_FILE:
+        required: true
+      KEY:
+        required: true
+      IV:
+        required: true
+      SF_CLIENT_ID:
+        required: true
+      SF_INSTANCE_URL:
+        required: true
+      SF_USERNAME:
+        required: true
+
+jobs:
+
+  build:
+    permissions:
+      contents: read # for actions/checkout to fetch code
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+
+    runs-on: ubuntu-latest ## Github Hosted [Self Hosted]
+    environment: ${{ inputs.environment }}
+
+    ## Create the variables for the Job and store the PR body in the variables
+    env:
+      PR_BODY: ${{ github.event.pull_request.body }}
+      NULL_VAR: ''
+      TEST_LEVEL: RunSpecifiedTests
+      APEX_CLASS_RUN: 
+
+    steps:
+      - name: "Print the Information"
+        run: |
+          echo ${{ github.event }}
+          echo ${{ github.event.action }}
+          echo ${{ github.ref }}
+          echo ${{ env.TEST_LEVEL }}
+        
+      - name: Checkout Code
+        uses: actions/checkout@v4.1.7
+        with:
+          fetch-depth: 0
+      
+      - name: npm install
+        run: echo "running npm install"
+        ## Install Saleforce CLI
+      
+      - name: Install Salesforce CLI
+        run: npm install @salesforce/cli --global 
+      
+      # Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run the extractor script
+        id: extract_classes
+        run: |
+          echo "${{ github.event.pull_request.body }}"  >> pr_body.txt
+          python PRBODY_TESTCLASS.py > output.txt
+          cat output.txt
+          echo "apex_classes=$(cat output.txt)" >> $GITHUB_ENV
+          echo "${{ env.apex_classes }}"
+
+      - name: Install Salesforce Code Anayzer
+        id: salesforce-cli-scanner
+        run: sf plugins install @salesforce/sfdx-scanner
+
+      - name: Run Salesforce Code Anayzer Scan
+        id: code-analyzer
+        run: |
+          mkdir reports
+          echo "Folder is created"
+          
+          sf scanner run --format html --target force-app/main/default/classes --engine pmd,pmd-appexchange --category Design,Best Practices, Code Style,Performance,Security,Documentation, Error Prone --outfile reports/scan-reports.html
+          # echo "Starting the scan in sarif format"
+          
+          # sf scanner run --format sarif --target force-app/main/default/classes --engine pmd,pmd-appexchange --category Design,Best Practices, Code Style,Performance,Security,Documentation, Error Prone --outfile reports/scan-reports.sarif --severity-threshold=3 
+          # sf scanner run --format sarif --target force-app/main/default/classes --engine pmd,pmd-appexchange --category Design,Best Practices, Code Style,Performance,Security,Documentation, Error Prone --outfile reports/scan-reports.sarif
+          # echo "Scanning is Completed"
+      
+      ## Upload the report results as artifacts
+      - name: Upload a Salesforce CLI Scan Report
+        if: always()
+        id: upload-reports
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: cli-scan-report
+          path: reports/scan-reports.html
+
+      ## Upload the report results to codeql for process
+      # - name: Upload SARIF file - Salesforce CLI Scan Report
+      #  id: upload-sarif-file
+      #  uses: github/codeql-action/upload-sarif@v3
+      #  with:
+      #    sarif_file: reports/scan-reports.sarif
+      #   token: ${{ github.token }}
+      #    category: my-analysis-tool
+
+      - name: PMD SCAN
+        id: pmd_scan
+        uses: pmd/pmd-github-action@v2 
+        with:
+          rulesets: 'pmd/ruleset.xml'
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: pmd-report.sarif
+      
+      - name: Fail build if there are violations
+        if: steps.pmd_scan.outputs.violations != 0
+        run: |
+          echo "PMD Violatons ${{steps.pmd_scan.outputs.violations}} "
+        ## exit 1
+
+      - name: Decrypt the server.key.enc file
+        run: openssl enc -nosalt -aes-256-cbc -d -in ${{ secrets.ENCRYPTED_KEY_FILE }} -out ${{ secrets.JWT_KEY_FILE }} -base64 -K ${{ secrets.KEY }} -iv ${{ secrets.IV }}
+      
+      - name: Authorize with Salesforce org
+        run: |
+          echo ${{vars.ORG_URL}}
+          sf org login jwt --username ${{ secrets.SF_USERNAME }} --jwt-key-file ${{ secrets.JWT_KEY_FILE }} --client-id ${{ secrets.SF_CLIENT_ID }} --set-default --alias developer2 --instance-url ${{ secrets.SF_INSTANCE_URL }}
+
+      - name: Run the Apex Test Classes
+        run: |
+          sf apex run test --target-org developer2 --test-level RunLocalTests --code-coverage --result-format human -d ./ --wait 10
+
+      ## Check the code coverage -- START
+      - name: Run Apex Coverage Check
+        run: |
+          python CODE_COVERAGE.py
+      ## Check the code coverage -- END
+
+      ## Scan the code using SonarCloud
+      #- name: SonarCloud Scan
+        #id: sonar-scanner
+        #uses: SonarSource/sonarcloud-github-action@master
+        #env:
+          #GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          #SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        #with:
+          #args: >
+            #-Dsonar.apex.coverage.reportPath=test-result-codecoverage.json
+            #-Dsonar.verbose=true
+
+      - name: SonarCloud Scan
+        id: sonar
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+            args: "-Dsonar.apex.coverage.reportPath=reports/test-result-codecoverage.json"
+    
+          ## Check the Quality Gate using SonarCloud API for the pull request
+      #- name: Check the Quality Gate using SonarCloud API
+        ##run: |
+            #MAX_RETRIES=30  # Maximum number of retries (5 minutes if we sleep 10s between retries)
+            #RETRY_INTERVAL=10  # Sleep interval in seconds
+            #SONAR_STATUS="NONE"
+            #RETRIES=0
+            #PR_NUMBER=${{ github.event.pull_request.number }}  # Extract pull request number
+            #while [ "$SONAR_STATUS" == "NONE" ] && [ $RETRIES -lt $MAX_RETRIES ]; do
+            #echo "Waiting for SonarCloud analysis to complete..."
+            #sleep $RETRY_INTERVAL
+            #SONAR_STATUS=$(curl -s -u $SONAR_TOKEN: "https://sonarcloud.io/api/qualitygates/project_status?projectKey=narendraudemalla_CICD&pullRequest=$PR_NUMBER" | jq -r '.projectStatus.status')
+            #RETRIES=$((RETRIES + 1))
+            #done
+            #echo "Quality Gate Status: $SONAR_STATUS"
+            #if [ "$SONAR_STATUS" != "OK" ]; then
+                #echo "SonarCloud Quality Gate failed!"
+                #exit 1
+            #fi
+            #env:
+              #SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+
+      
+      - name: Upload code coverage for Apex to Codecov.io
+        id: upload-coverage
+        uses: codecov/codecov-action@v4
+        with:
+          flags: Apex
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Install SFDX Git delta aka SGD 
+        run: |
+          echo 'y' | sf plugins install sfdx-git-delta
+      
+      - name: Create delta folder 
+        run: |
+          mkdir delta
+      
+      - name: Generate the delta file for deployment
+        run: |
+          sf sgd source delta --to "HEAD" --from "HEAD~1" --output "./delta" --generate-delta --ignore-whitespace --ignore .sgdignore
+          echo "--- package.xml generated with added and modified metadata ---"
+          cat delta/package/package.xml
+          cat delta/destructiveChanges/destructiveChanges.xml
+
+      - name: Validate Pre Destructive Changes
+        if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
+        run: |
+          if grep -q '<types>' delta/destructiveChanges/destructiveChanges.xml ; then
+            echo "---- validating Destructive Changes ----"
+            sf project deploy validate --target-org developer2 --pre-destructive-changes delta/destructiveChanges/destructiveChanges.xml --manifest delta/destructiveChanges/package.xml --wait 10
+          else
+            echo "---- No changes to validate ----"
+          fi
+      
+      - name: Validate The Code to Salesforce
+        if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && env.apex_classes != 'No Apex classes found' }}
+        run: |
+          echo ${{ github.event_name }}
+          echo ${{ github.event.action }}
+          echo ${{ github.event.pull_request.merged }}
+
+          if grep -q '<types>' delta/package/package.xml ; then
+            echo "---- validating added and modified metadata ----"
+            sf project deploy validate --source-dir delta/force-app --target-org developer2 --test-level RunSpecifiedTests --tests ${{ env.apex_classes }} --wait 10
+          else
+            echo "---- No changes to validate ----"
+          fi
+
+      - name: Validate The Code to Salesforce
+        if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && env.apex_classes == 'No Apex classes found' }}
+        run: |
+          echo ${{ github.event_name }}
+          echo ${{ github.event.action }}
+          echo ${{ github.event.pull_request.merged }}
+
+          if grep -q '<types>' delta/package/package.xml ; then
+            echo "---- validating added and modified metadata ----"
+            sf project deploy validate --source-dir delta/force-app --target-org developer2 --wait 10
+          else
+            echo "---- No changes to validate ----"
+          fi
+
+      - name: Validate Post Destructive Changes
+        if: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
+        run: |
+          if grep -q '<types>' destructiveChanges/postDestructiveChanges.xml ; then
+            echo "---- deploying Destructive Changes ----"
+            sf project deploy start --target-org developer2 --post-destructive-changes destructiveChanges/postDestructiveChanges.xml --manifest destructiveChanges/package.xml --wait 10
+          else
+            echo "---- No changes to validate ----"
+          fi
+
+      - name: Deploy Pre Destructive Changes
+        if: ${{ github.event.pull_request.merged == true && github.event.action == 'closed' }}
+        run: |
+          if grep -q '<types>' delta/destructiveChanges/destructiveChanges.xml ; then
+            echo "---- deploying added and modified metadata ----"
+            sf project deploy start --target-org developer2 --pre-destructive-changes delta/destructiveChanges/destructiveChanges.xml --manifest delta/destructiveChanges/package.xml --wait 10
+          else
+            echo "---- No changes to validate ----"
+          fi
+
+      - name: Deploy the Code
+        ## Best is to have a separate Org for validation purpose
+        if: ${{ github.event.pull_request.merged == true && github.event.action == 'closed' && env.apex_classes != 'No Apex classes found' }}
+        run: |
+          echo ${{ github.event_name }}
+          echo ${{ github.event.action }}
+          echo ${{ github.event.pull_request.merged }}
+          
+          if grep -q '<types>' delta/package/package.xml ; then
+            echo "---- Deploying added and modified metadata ----"
+            sf project deploy start --source-dir delta/force-app --target-org developer2 --test-level RunSpecifiedTests --tests ${{ env.apex_classes }} --wait 10
+          else
+            echo "---- No changes to deploy ----"
+          fi
+
+      - name: Deploy Post Destructive Changes
+        if: ${{ github.event.pull_request.merged == true && github.event.action == 'closed' }}
+        run: |
+          if grep -q '<types>' destructiveChanges/postDestructiveChanges.xml ; then
+            echo "---- deploying Destructive Changes ----"
+            sf project deploy start --target-org developer2 --post-destructive-changes destructiveChanges/postDestructiveChanges.xml --manifest destructiveChanges/package.xml --wait 10
+          else
+            echo "---- No changes to validate ----"
+          fi
+
+## If the event is PR [opened, edited, reoped] - Validate the change
+## If PR is closed then - deploy the change
